@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>康鲁泉净水器维修管理系统 - 联网专业版</title>
+    <title>康鲁泉管理系统 - 联网版</title>
+    <!-- 核心库 -->
     <script src="https://lib.baomitu.com/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://lib.baomitu.com/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://lib.baomitu.com/lucide/0.263.0/lucide.min.js"></script>
     <script src="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
-        body { font-family: -apple-system, system-ui, sans-serif; background: #f9fafb; }
-        #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: white; z-index: 9999; transition: opacity 0.5s; }
-        .animate-spin { animation: spin 1s linear infinite; width: 40px; height: 40px; border: 4px solid #2563eb; border-top-color: transparent; border-radius: 50%; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        body { font-family: sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
+        .btn-blue { background: #2563eb; color: white; padding: 12px 24px; border-radius: 12px; font-weight: bold; border: none; cursor: pointer; width: 100%; }
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 16px; }
     </style>
 </head>
 <body>
-    <div id="loading"><div style="text-align: center;"><div class="animate-spin"></div><p style="margin-top: 10px; color: #666; font-weight: bold;">系统同步中...</p></div></div>
     <div id="root"></div>
     <script>
+        // Firebase 配置
         const firebaseConfig = {
           apiKey: "AIzaSyASiJ4T__0QN3R-rKfcSRrzjSv8gMx8m44",
           authDomain: "gen-lang-client-0025058783.firebaseapp.com",
@@ -32,58 +33,69 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore(firebase.app(), firebaseConfig.firestoreDatabaseId);
-        const { useState, useEffect, useMemo } = React;
+
+        const { useState, useEffect } = React;
+
         function App() {
             const [user, setUser] = useState(null);
             const [machines, setMachines] = useState([]);
             const [loading, setLoading] = useState(true);
-            const [modal, setModal] = useState(null);
-            const [selected, setSelected] = useState(null);
-            const [searchTerm, setSearchTerm] = useState('');
+
             useEffect(() => {
                 return auth.onAuthStateChanged(u => {
                     setUser(u); setLoading(false);
-                    const loader = document.getElementById('loading');
-                    if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
                 });
             }, []);
+
             useEffect(() => {
                 if (!user) return;
                 return db.collection('machines').onSnapshot(s => {
                     setMachines(s.docs.map(d => ({ id: d.id, ...d.data() })));
-                    if(window.lucide) lucide.createIcons();
-                });
+                }, err => alert("数据库连接失败: " + err.message));
             }, [user]);
-            const login = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-            const filtered = machines.filter(m => m.id.includes(searchTerm) || m.community.includes(searchTerm));
-            if (loading) return null;
-            if (!user) return React.createElement('div', { className: 'h-screen flex items-center justify-center bg-blue-600 p-6' }, 
-                React.createElement('div', { className: 'bg-white p-8 rounded-3xl text-center space-y-6 w-full max-w-sm' },
-                    React.createElement('h1', { className: 'text-2xl font-black' }, '康鲁泉管理系统'),
-                    React.createElement('button', { onClick: login, className: 'w-full py-4 bg-blue-600 text-white rounded-2xl font-bold' }, '点击登录使用')
+
+            const login = () => {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                auth.signInWithPopup(provider).catch(err => {
+                    console.error(err);
+                    alert("登录失败原因: " + err.message + "\n\n提示：请确保在手机自带浏览器中打开，不要在微信内置浏览器中直接点。");
+                });
+            };
+
+            if (loading) return React.createElement('div', { style: { padding: '50px', textAlign: 'center' } }, '系统初始化中...');
+
+            if (!user) return React.createElement('div', { style: { display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#2563eb' } }, 
+                React.createElement('div', { className: 'card', style: { width: '300px', textAlign: 'center' } },
+                    React.createElement('h1', { style: { marginBottom: '10px' } }, '康鲁泉管理系统'),
+                    React.createElement('p', { style: { color: '#666', marginBottom: '20px' } }, '联网专业版'),
+                    React.createElement('button', { onClick: login, className: 'btn-blue' }, '点击登录使用'),
+                    React.createElement('p', { style: { fontSize: '10px', color: '#999', marginTop: '15px' } }, '提示：如果点击没反应，请检查浏览器是否拦截了弹出窗口')
                 )
             );
-            return React.createElement('div', { className: 'pb-20' },
-                React.createElement('header', { className: 'bg-white p-4 border-b sticky top-0 flex justify-between items-center' },
-                    React.createElement('h1', { className: 'font-black text-blue-600' }, '康鲁泉管理系统'),
-                    React.createElement('button', { onClick: () => {
-                        const id = prompt('设备编号:'); const comm = prompt('所属小区:');
-                        if(id && comm) db.collection('machines').doc(id).set({ id, community: comm, status: 'normal' });
-                    }, className: 'bg-blue-600 text-white p-2 rounded-lg' }, '+')
+
+            return React.createElement('div', { style: { padding: '20px', maxWidth: '600px', margin: '0 auto' } },
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' } },
+                    React.createElement('h2', { style: { color: '#2563eb', margin: 0 } }, '设备列表'),
+                    React.createElement('button', { 
+                        onClick: () => {
+                            const id = prompt('设备编号:'); const comm = prompt('所属小区:');
+                            if(id && comm) db.collection('machines').doc(id).set({ id, community: comm, status: 'normal' });
+                        },
+                        style: { background: '#2563eb', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold' }
+                    }, '+ 新增')
                 ),
-                React.createElement('div', { className: 'p-4' }, 
-                    React.createElement('input', { placeholder: '搜索...', className: 'w-full p-3 border rounded-xl mb-4', onChange: e => setSearchTerm(e.target.value) }),
-                    filtered.map(m => React.createElement('div', { key: m.id, className: 'bg-white p-4 rounded-2xl border mb-4 shadow-sm' },
-                        React.createElement('div', { className: 'flex justify-between mb-4' },
-                            React.createElement('div', null, React.createElement('h3', { className: 'font-bold' }, m.id), React.createElement('p', { className: 'text-xs text-gray-400' }, m.community)),
-                            React.createElement('span', { className: `text-[10px] px-2 py-1 rounded ${m.status === 'normal' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}` }, m.status === 'normal' ? '正常' : '故障')
-                        ),
-                        React.createElement('button', { 
-                            onClick: () => db.collection('machines').doc(m.id).update({ status: m.status === 'normal' ? 'fault' : 'normal' }),
-                            className: `w-full py-2 rounded-xl text-xs font-bold ${m.status === 'normal' ? 'bg-red-50 text-red-600' : 'bg-green-600 text-white'}`
-                        }, m.status === 'normal' ? '报修' : '完成维修')
-                    ))
-                )
+                machines.length === 0 ? React.createElement('p', { style: { textAlign: 'center', color: '#999', marginTop: '50px' } }, '暂无设备，点击右上角新增') :
+                machines.map(m => React.createElement('div', { key: m.id, className: 'card' },
+                    React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between' } },
+                        React.createElement('div', null, React.createElement('b', null, m.id), React.createElement('p', { style: { fontSize: '12px', color: '#666', margin: '4px 0' } }, m.community)),
+                        React.createElement('span', { style: { color: m.status === 'normal' ? '#16a34a' : '#dc2626', fontSize: '12px', fontWeight: 'bold' } }, m.status === 'normal' ? '● 运行中' : '● 故障')
+                    ),
+                    React.createElement('button', { 
+                        onClick: () => db.collection('machines').doc(m.id).update({ status: m.status === 'normal' ? 'fault' : 'normal' }),
+                        style: { width: '100%', marginTop: '10px', padding: '8px', borderRadius: '8px', border: 'none', fontWeight: 'bold', background: m.status === 'normal' ? '#fee2e2' : '#16a34a', color: m.status === 'normal' ? '#dc2626' : 'white' }
+                    }, m.status === 'normal' ? '报修' : '完成维修')
+                )),
+                React.createElement('button', { onClick: () => auth.signOut(), style: { width: '100%', marginTop: '30px', background: 'none', border: 'none', color: '#999', fontSize: '12px' } }, '退出登录')
             );
         }
         ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
