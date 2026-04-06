@@ -9,37 +9,51 @@
     <script src="https://lib.baomitu.com/lucide/0.263.0/lucide.min.js"></script>
     <script src="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.js"></script>
     <style>
-        body { font-family: -apple-system, system-ui, sans-serif; background: #f9fafb; }
-        #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: white; z-index: 9999; }
-        .animate-spin { animation: spin 1s linear infinite; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: #f9fafb; margin: 0; }
+        #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: white; z-index: 9999; transition: opacity 0.5s; }
+        .animate-spin { animation: spin 1s linear infinite; width: 40px; height: 40px; border: 4px solid #2563eb; border-top-color: transparent; border-radius: 50%; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div id="loading"><div class="text-center"><div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p class="text-gray-500 font-bold">系统加载中...</p></div></div>
+    <div id="loading"><div style="text-align: center;"><div class="animate-spin"></div><p style="margin-top: 10px; color: #666; font-weight: bold;">系统加载中...</p></div></div>
     <div id="root"></div>
     <script>
         window.onload = () => { const loader = document.getElementById('loading'); if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } };
-        const { useState, useEffect, useMemo } = React;
-        const STORAGE_KEY = 'kangluquan_data';
+        const { useState, useEffect } = React;
+        const STORAGE_KEY = 'kangluquan_v2';
         const App = () => {
             const [machines, setMachines] = useState(() => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
-            const [modal, setModal] = useState(null);
-            useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(machines)); lucide.createIcons(); }, [machines, modal]);
-            return React.createElement('div', { className: 'p-4' }, 
-                React.createElement('div', { className: 'flex justify-between items-center mb-6' },
-                    React.createElement('h1', { className: 'text-2xl font-black text-blue-600' }, '康鲁泉管理系统'),
-                    React.createElement('button', { onClick: () => {
-                        const id = prompt('请输入设备编号:');
-                        const comm = prompt('请输入小区名称:');
-                        if(id && comm) setMachines([...machines, { id, community: comm, status: 'normal' }]);
-                    }, className: 'bg-blue-600 text-white px-4 py-2 rounded-xl font-bold' }, '+ 新增')
+            useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(machines)); if(window.lucide) lucide.createIcons(); }, [machines]);
+            const addMachine = () => {
+                const id = prompt('请输入设备编号 (如 KLQ-001):');
+                const comm = prompt('请输入所属小区:');
+                if (id && comm) setMachines([...machines, { id, community: comm, status: 'normal', date: new Date().toLocaleDateString() }]);
+            };
+            const toggleStatus = (id) => {
+                setMachines(machines.map(m => m.id === id ? { ...m, status: m.status === 'normal' ? 'fault' : 'normal' } : m));
+            };
+            const deleteMachine = (id) => { if(confirm('确定删除该设备吗？')) setMachines(machines.filter(m => m.id !== id)); };
+            return React.createElement('div', { style: { maxWidth: '600px', margin: '0 auto', padding: '20px' } },
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' } },
+                    React.createElement('h1', { style: { color: '#2563eb', margin: 0, fontSize: '24px', fontWeight: '900' } }, '康鲁泉管理系统'),
+                    React.createElement('button', { onClick: addMachine, style: { background: '#2563eb', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' } }, '+ 新增设备')
                 ),
-                machines.length === 0 ? React.createElement('p', { className: 'text-center text-gray-400 py-20' }, '暂无设备，请点击右上角新增') :
-                machines.map(m => React.createElement('div', { key: m.id, className: 'bg-white p-4 rounded-2xl shadow-sm border mb-4' },
-                    React.createElement('div', { className: 'flex justify-between' },
-                        React.createElement('div', null, React.createElement('h3', { className: 'font-bold' }, m.id), React.createElement('p', { className: 'text-sm text-gray-500' }, m.community)),
-                        React.createElement('span', { className: `text-xs px-2 py-1 rounded ${m.status === 'normal' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}` }, m.status === 'normal' ? '正常' : '故障')
+                machines.length === 0 ? React.createElement('div', { style: { textAlign: 'center', padding: '100px 0', color: '#999' } }, '暂无设备，点击右上角开始添加') :
+                machines.map(m => React.createElement('div', { key: m.id, style: { background: 'white', padding: '15px', borderRadius: '16px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #eee' } },
+                    React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'start' } },
+                        React.createElement('div', null, 
+                            React.createElement('div', { style: { fontWeight: 'bold', fontSize: '18px' } }, m.id),
+                            React.createElement('div', { style: { color: '#666', fontSize: '14px' } }, m.community),
+                            React.createElement('div', { style: { color: '#999', fontSize: '12px', marginTop: '5px' } }, '安装日期: ' + m.date)
+                        ),
+                        React.createElement('div', { style: { textAlign: 'right' } },
+                            React.createElement('span', { style: { padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', background: m.status === 'normal' ? '#f0fdf4' : '#fef2f2', color: m.status === 'normal' ? '#16a34a' : '#dc2626' } }, m.status === 'normal' ? '运行中' : '故障中'),
+                            React.createElement('div', { style: { marginTop: '10px' } },
+                                React.createElement('button', { onClick: () => toggleStatus(m.id), style: { marginRight: '10px', fontSize: '12px', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' } }, m.status === 'normal' ? '报修' : '修复'),
+                                React.createElement('button', { onClick: () => deleteMachine(m.id), style: { fontSize: '12px', color: '#ff4d4f', background: 'none', border: 'none', cursor: 'pointer' } }, '删除')
+                            )
+                        )
                     )
                 ))
             );
